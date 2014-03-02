@@ -62,11 +62,17 @@ class HopfieldNetwork(object):
 			1 if sum(map(cosMul,self._weights[i],self._patterns[k]))>=0
 			else -1 
 			for i in xrange(self._numNeurons)] 
-			for k in xrange(maxPat)]
+			for k in xrange(maxPat)]	
+		cat = lambda x,y: (x,y)
+		comp = lambda x: x[0] == x[1]
+		compCorr = lambda x: x==self._numNeurons	
 		
+		r=filter(compCorr,[len(filter(comp,map(cat,self._patterns[i],neurons[i]))) 
+			for i in xrange(maxPat)])
+		return (len(r),maxPat-len(r),maxPat)
 		#getStr = lambda x,y: str(x)+":"+str(y)	
 		#print "\n".join(map(getStr,xrange(maxPat),neurons))
-				
+
 
 	def __str__(self):
 		tempStr = ""
@@ -82,13 +88,9 @@ def main(hn):
 	"""
 		Main entry point  of the program.
 	"""	
-	#print hn	
-	hn.imprintPatterns(hn.numPatterns)
-	print hn
-	hn.calcStableStats(hn.numPatterns)
-	#for p in xrange(hn.numPatterns):	
-	#	hn.imprintPatterns(p) 
-	#	print hn.calcStableStats(p)
+	for p in xrange(hn.numPatterns):	
+		hn.imprintPatterns(p) 
+		print hn.calcStableStats(p)
 
 if __name__ == "__main__":
 	#Seed the random network.
