@@ -1,4 +1,4 @@
-import sys,optparse,random
+import sys,optparse,random,copy
 
 class HopfieldNetwork(object):
 	"""
@@ -56,6 +56,11 @@ class HopfieldNetwork(object):
 		float(self._numNeurons) for i in xrange(self._numNeurons)] 
 		for j in xrange(self._numNeurons)]) 		
 
+	def _genPerms(self):
+		indices =  [i for i in xrange(self._numNeurons)]
+		random.shuffle(indices,random.random)
+		return indices
+	
 	def calcStableStats(self,maxPat):
 		cosMul = lambda x,y: x*y
 		neurons = [[ 
@@ -65,14 +70,42 @@ class HopfieldNetwork(object):
 			for k in xrange(maxPat)]	
 		cat = lambda x,y: (x,y)
 		comp = lambda x: x[0] == x[1]
-		compCorr = lambda x: x==self._numNeurons	
-		
-		r=filter(compCorr,[len(filter(comp,map(cat,self._patterns[i],neurons[i]))) 
-			for i in xrange(maxPat)])
-		return (len(r),maxPat-len(r),maxPat)
-		#getStr = lambda x,y: str(x)+":"+str(y)	
-		#print "\n".join(map(getStr,xrange(maxPat),neurons))
+		compCorr = lambda x: x==self._numNeurons
+		values = [len(filter(comp,map(cat,self._patterns[i],neurons[i]))) 
+			for i in xrange(maxPat)]
 
+		basinSizes = [ 0 for x in xrange(self._numPatterns)]
+
+		#Generate 5 different permutations.
+		perms = [ self._genPerms() for x in xrange(5) ]			
+		for perm in perms:
+			#Flip the new patterns..
+			for i in xrange(maxPat):
+				if values[i] == False:
+					basVal[0]+=1
+					continue
+				#Copy the old patterns.
+				modPatterns = copy.deepcopy(self._patterns[i])
+				basVal = 0
+				for j in xrange(50):
+					modPatterns[perm[j]] = self._patterns[i][perm[j]]*-1
+					upPatterns = copy.deepcopy(modPatterns)
+					#Update 10 times...		
+					for x in xrange(10):
+						upPatterns = [
+							1 if sum(map(cosMul,upPatterns,self._weights[z]))>=0
+							else -1
+							for z in xrange(self._numNeurons)]
+					if (len(filter(comp,map(cat,self._patterns[i],upPatterns)))!= 
+					self._numNeurons):
+						basVal = j
+						break
+				basinSizes[basVal]+=1 
+		
+		print basinSizes
+
+		r = filter(compCorr,values)
+		return ((len(r),maxPat-len(r),maxPat))
 
 	def __str__(self):
 		tempStr = ""
@@ -88,7 +121,8 @@ def main(hn):
 	"""
 		Main entry point  of the program.
 	"""	
-	for p in xrange(hn.numPatterns):	
+	for p in xrange(hn.numPatterns):
+		p+1	
 		hn.imprintPatterns(p) 
 		print hn.calcStableStats(p)
 
