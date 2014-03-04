@@ -1,4 +1,6 @@
 import sys,optparse,random,copy
+import matplotlib as mpl
+import pylab as plt
 
 class HopfieldNetwork(object):
 	"""
@@ -73,9 +75,7 @@ class HopfieldNetwork(object):
 		compCorr = lambda x: x==self._numNeurons
 		values = [len(filter(comp,map(cat,self._patterns[i],neurons[i]))) 
 			for i in xrange(maxPat)]
-
 		basinSizes = [ 0 for x in xrange(self._numPatterns)]
-
 		#Generate 5 different permutations.
 		perms = [ self._genPerms() for x in xrange(5) ]			
 		for perm in perms:
@@ -100,12 +100,9 @@ class HopfieldNetwork(object):
 					self._numNeurons):
 						basVal = j
 						break
-				basinSizes[basVal]+=1 
-		
-		print basinSizes
-
+				basinSizes[basVal]+=1 		
 		r = filter(compCorr,values)
-		return ((len(r),maxPat-len(r),maxPat))
+		return (len(r),maxPat-len(r),maxPat,basinSizes)
 
 	def __str__(self):
 		tempStr = ""
@@ -117,20 +114,74 @@ class HopfieldNetwork(object):
 		tempStr+="\n"+self._buildWeightString()
 		return tempStr
 
+def unGrad(hn,p):
+	print p
+	hn.imprintPatterns(p)
+	return hn.calcStableStats(p)
+
+def getColReg(x,idx):
+	return map(lambda x: x[id])
+
+def getCol(x,idx,stat):
+	return map(lambda x: x[idx][stat],x)
+
+def getProbCol(x,idx):
+	return map(lambda x: x[idx][1]/float(x[idx][2]),x)
+	
+def getRows(x,idx):
+	return map(lambda x: x[idx],x)
+
+def getColumns(x,idx):
+	return map(lambda x: x[idx],x)
+
 def main(hn):
 	"""
 		Main entry point  of the program.
-	"""	
-	for p in xrange(hn.numPatterns):
-		p+1	
-		hn.imprintPatterns(p) 
-		print hn.calcStableStats(p)
+	"""
+	results = [[unGrad(hn,p)	
+		for p in xrange(1,hn.numPatterns+1)]
+		for run in xrange(hn.numRuns)]
+ 
+	avgStable = [	
+		sum(getCol(results,p-1,0))/float(hn.numRuns)	
+		for p in xrange(1,hn.numPatterns+1)]
+
+	probNotStable = [
+		sum(getProbCol(results,p-1))/float(hn.numRuns)
+		for p in xrange(1,hn.numPatterns+1)]
+
+	basins = [[
+		currentTuple[3]
+		for currentTuple in run]		
+		for run in results] 
+
+	avgBasins = [[
+		sum(getColumns(getRows(basins,i),j))/float((hn.numRuns*(i+1)))
+		for j in xrange(hn.numPatterns)]
+		for i in xrange(hn.numPatterns)]
+
+	print avgBasins
+
+
+	plt.figure(1)
+	plt.subplot(211)
+	plt.plot(xrange(hn.numPatterns),avgStable)
+	plt.ylim([0,20])	
+	plt.subplot(212)
+	plt.plot(xrange(hn.numPatterns),probNotStable)
+	plt.ylim([0,1.1])
+
+	plt.figure(2)
+	plt.subplot(211)
+	xVals = xrange(hn.numPatterns)
+	[plt.plot(xVals,avgBasins[j]) for j in xrange(1,hn.numPatterns,2)]		
+	plt.show()
 
 if __name__ == "__main__":
 	#Seed the random network.
 	random.seed()
 	#Initialize a default hopfield network.
- 	hn = HopfieldNetwork(50,50,100)
+ 	hn = HopfieldNetwork(2,50,100)
 	parser = optparse.OptionParser()
 	parser.add_option("--numRuns")
 	parser.add_option("--numPatterns")
