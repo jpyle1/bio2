@@ -38,6 +38,12 @@ class HopfieldNetwork(object):
 	@numRuns.setter
 	def numRuns(self,value):
 		self._numRuns = value
+	
+	def genPatterns(self):
+		randVal = lambda : 1 if random.random()>=.5 else -1 
+		self._patterns = ([[randVal() for x in xrange(self._numNeurons)] 
+			for y in xrange(self._numPatterns)]) 
+
 
 	def _buildWeightString(self):
 		getStr = lambda x,y: str(x)+":"+str(y)
@@ -75,19 +81,21 @@ class HopfieldNetwork(object):
 		compCorr = lambda x: x==self._numNeurons
 		values = [len(filter(comp,map(cat,self._patterns[i],neurons[i]))) 
 			for i in xrange(maxPat)]
-		basinSizes = [ 0 for x in xrange(self._numPatterns)]
+		
+		basinSizes = [ 0 for x in xrange(self._numNeurons/2)]
+		"""
 		#Generate 5 different permutations.
-		perms = [ self._genPerms() for x in xrange(5) ]			
+		perms = [ self._genPerms() for x in xrange(4) ]			
 		for perm in perms:
 			#Flip the new patterns..
 			for i in xrange(maxPat):
-				if values[i] == False:
-					basVal[0]+=1
+				if values[i] == 0:
+					basinSizes[0]+=1
 					continue
 				#Copy the old patterns.
 				modPatterns = copy.deepcopy(self._patterns[i])
 				basVal = 0
-				for j in xrange(50):
+				for j in xrange(self._numNeurons/2):
 					modPatterns[perm[j]] = self._patterns[i][perm[j]]*-1
 					upPatterns = copy.deepcopy(modPatterns)
 					#Update 10 times...		
@@ -100,7 +108,8 @@ class HopfieldNetwork(object):
 					self._numNeurons):
 						basVal = j
 						break
-				basinSizes[basVal]+=1 		
+				basinSizes[basVal]+=1 
+		"""		
 		r = filter(compCorr,values)
 		return (len(r),maxPat-len(r),maxPat,basinSizes)
 
@@ -138,9 +147,15 @@ def main(hn):
 	"""
 		Main entry point  of the program.
 	"""
-	results = [[unGrad(hn,p)	
-		for p in xrange(1,hn.numPatterns+1)]
-		for run in xrange(hn.numRuns)]
+	results = []
+	for run in xrange(hn.numRuns):
+		hn.genPatterns()
+		results.append([ unGrad(hn,p) for p in xrange(1,hn.numPatterns+1)])
+
+	#results = [[unGrad(hn,p)	
+	#	for p in xrange(1,hn.numPatterns+1)] 
+	#	hn.genPatterns()
+	#	for run in xrange(hn.numRuns)]
  
 	avgStable = [	
 		sum(getCol(results,p-1,0))/float(hn.numRuns)	
@@ -149,20 +164,21 @@ def main(hn):
 	probNotStable = [
 		sum(getProbCol(results,p-1))/float(hn.numRuns)
 		for p in xrange(1,hn.numPatterns+1)]
-
+	"""
 	basins = [[
 		currentTuple[3]
 		for currentTuple in run]		
 		for run in results] 
 
 	avgBasins = [[
-		sum(getColumns(getRows(basins,i),j))/float((hn.numRuns*(i+1)))
-		for j in xrange(hn.numPatterns)]
+		sum(getColumns(getRows(basins,i),j))/float((hn.numRuns)*(i+1))
+		for j in xrange(hn.numNeurons/2)]
 		for i in xrange(hn.numPatterns)]
 
-	print avgBasins
-
-
+	probBasins = [[avgBasins[i][j]/float(sum(avgBasins[i]))
+		for j in xrange(hn.numNeurons/2)]
+		for i in xrange(hn.numPatterns)]
+	"""
 	plt.figure(1)
 	plt.subplot(211)
 	plt.plot(xrange(hn.numPatterns),avgStable)
@@ -170,13 +186,17 @@ def main(hn):
 	plt.subplot(212)
 	plt.plot(xrange(hn.numPatterns),probNotStable)
 	plt.ylim([0,1.1])
-
+	"""
 	plt.figure(2)
 	plt.subplot(211)
-	xVals = xrange(hn.numPatterns)
-	[plt.plot(xVals,avgBasins[j]) for j in xrange(1,hn.numPatterns,2)]		
+	xVals = xrange(hn.numNeurons/2)
+	plots = [plt.plot(xVals,avgBasins[j]) for j in xrange(1,hn.numNeurons/2,2)]
+	plt.ylim([0,4])		
+	plt.subplot(212)
+	pplots = [plt.plot(xVals,probBasins[j]) for j in xrange(1,hn.numNeurons/2,2)]
+	plt.ylim([0,1])
+	"""
 	plt.show()
-
 if __name__ == "__main__":
 	#Seed the random network.
 	random.seed()
